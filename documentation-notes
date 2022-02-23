@@ -1,0 +1,9 @@
+notes for usage:
+* perform() does not automatically calculate how many ticks to process for patches that read from a .wav file.
+  that is, if you have a wave file that is 100 ticks long and you call perform(200), it wont stop after those 100 ticks.
+  you'll have an extra 100 ticks of silence, assuming you have nothing else in the patch. to get around this, load the sound
+  file you play in that patch into an AudioStreamPlayer, get the .length of it's .data field, then store that and use that as
+  a reference for how many ticks to pass to perform().
+* make sure that you don't overwrite an AudioStreamPlayer's .data field with the PoolByteArray from perform() *while the player is currently playing*,
+  especially if you're calling perform() with a lower number of ticks than you did for the prior perform() call (e.g.: perform(100) followed by perform(50))
+  it'll result in weirdness that may see the player try to play past the amount of data it has available to it.
