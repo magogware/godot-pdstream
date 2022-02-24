@@ -1,10 +1,37 @@
-library : 
-	gcc -I./godot-headers -I./libpd/libpd_wrapper -I./libpd/pure-data/src -c ./src/pdstream.c -o ./bin/pdstream.o
-	gcc -I./libpd/libpd_wrapper -I./libpd/pure-data/src -c ./src/instance.c -o ./bin/instance.o
-	gcc ./bin/pdstream.o ./bin/instance.o -o bin/pdstream.dll -shared -Wl,--export-all-symbols -static-libgcc -L./libpd/libs -lpd
-test :
-	gcc -I./godot-headers -I./libpd/libpd_wrapper -I./libpd/pure-data/src -I./wavfile -c ./src/pdtest_thread.c -o ./bin/pdtest_thread.o
-	gcc -c ./wavfile/wavfile.c -o ./bin/wavfile.o
-	gcc bin/pdtest_thread.o bin/wavfile.o -o ./pdtest_thread.exe -static-libgcc -L./libpd/libs -lpd
+SRC = ./src/pdstream.c \
+	./src/instance.c
+	
+INCLUDES = -I./godot-headers \
+	-I./libpd/libpd_wrapper \
+	-I./libpd/pure-data/src
+	
+LIBS = -L./libpd/libs -lpd
+	
+CFLAGS = $(INCLUDES)
+
+ifeq ($(shell uname),Darwin)
+	SOLIB_EXT = dylib
+else
+	SOLIB_EXT = dll
+	LDFLAGS += -Wl,--export-all-symbols \
+		-static-libgcc
+endif
+	
+LDFLAGS += -shared\
+	$(LIBS)
+
+ifeq ($(OS),Windows_NT)
+	PDSTREAM = bin/pd.$(SOLIB_EXT)
+else
+	PDSTREAM = bin/libpd.$(SOLIB_EXT)
+endif
+
+$(PDSTREAM): ${SRC:.c=.o}
+	$(CC) -o $(PDSTREAM) $^ $(LDFLAGS)
+	
+clean:
+	rm ${SRC:.c=.o}
+	rm $(PDSTREAM)
 
 # -Wl,-Bstatic -lm -Wl,-Bstatic -lpthread
+
