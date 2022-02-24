@@ -21,9 +21,9 @@ LDFLAGS += -shared\
 	$(LIBS)
 
 ifeq ($(OS),Windows_NT)
-	PDSTREAM = bin/pd.$(SOLIB_EXT)
+	PDSTREAM = bin/pdstream.$(SOLIB_EXT)
 else
-	PDSTREAM = bin/libpd.$(SOLIB_EXT)
+	PDSTREAM = bin/libpdstream.$(SOLIB_EXT)
 endif
 
 $(PDSTREAM): ${SRC:.c=.o}
