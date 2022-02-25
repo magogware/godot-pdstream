@@ -1,2 +1,4 @@
 bin/*
 src/*.o
+.nova/
+.DS_STORE
