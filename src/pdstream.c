@@ -69,14 +69,14 @@ godot_variant pdstream_create(godot_object *p_instance,
                             godot_variant **p_args)
 {
     instance_t *inst = (instance_t *) p_user_data;
-    short *inputs, *outputs;
+    float *inputs, *outputs;
     size_t ninputs, noutputs, blocksize;
     int64_t samplerate;
 
     blocksize  = 64;
     samplerate = 44100;
-    ninputs    = 1;
-    noutputs   = 1;
+    ninputs    = 0;
+    noutputs   = 2;
 
     switch (p_num_args) {
         case 0: {
@@ -93,17 +93,11 @@ godot_variant pdstream_create(godot_object *p_instance,
             samplerate = core_api->godot_variant_as_int(p_args[1]);
             ninputs    = core_api->godot_variant_as_int(p_args[2]);
             break;
-        } case 4: {
-            blocksize  = core_api->godot_variant_as_int(p_args[0]);
-            samplerate = core_api->godot_variant_as_int(p_args[1]);
-            ninputs    = core_api->godot_variant_as_int(p_args[2]);
-            noutputs   = core_api->godot_variant_as_int(p_args[3]);
-            break;
         }
     }
 
-    inputs =  (short *)core_api->godot_alloc(blocksize * ninputs *  sizeof(*inst->inputs));
-    outputs = (short *)core_api->godot_alloc(blocksize * noutputs * sizeof(*inst->outputs));
+    inputs =  (float *)core_api->godot_alloc(blocksize * ninputs *  sizeof(*inst->inputs));
+    outputs = (float *)core_api->godot_alloc(blocksize * noutputs * sizeof(*inst->outputs));
 
     if (blocksize % 64) {
         core_api->godot_print_error("Blocksize must be a multiple of 64!", "pdstream_init", "pdstream.c", 85);
@@ -176,37 +170,32 @@ godot_variant pdstream_perform(godot_object *p_instance,
                                      int p_num_args,
                                      godot_variant **p_args)
 {
-
-    printf("Started perform");
-
-    unsigned char sample_byte_l, sample_byte_r;
     instance_t *inst = (instance_t *) p_user_data;
-    godot_pool_byte_array data;
+    godot_pool_vector2_array data;
+    godot_vector2 frame;
     godot_variant rval;
     int i, j;
     int64_t numblocks = core_api->godot_variant_as_int(p_args[0]);
     
-    core_api->godot_pool_byte_array_new(&data);
+    core_api->godot_vector2_new(&frame, 1.0, 1.0);
+    core_api->godot_pool_vector2_array_new(&data);
     if (start_dsp(inst))
         core_api->godot_print_error("Couldn't send DSP start message!", "pdstream_process_audio", "pdstream.c", 197);
     for (i = 0; i < numblocks; i++) {
         if (perform(inst))
             core_api->godot_print_error("Couldn't process blocks!", "pdstream_process_audio", "pdstream.c", 200);
-        for (j = 0; j < (inst->noutputs * inst->blocksize); j++) { // Separate shorts into two separate bytes so Godot sees it as PCM16 data
-            printf("%d\n", inst->outputs[j]);
-            sample_byte_l = (unsigned char) (inst->outputs[j] & 0xFF);
-            sample_byte_r = (unsigned char) ((inst->outputs[j] >> 8) & 0xFF);
-            core_api->godot_pool_byte_array_append (&data, sample_byte_l);
-            core_api->godot_pool_byte_array_append(&data, sample_byte_r);
+        for (j = 0; j < (inst->noutputs * inst->blocksize); j+=2) { // Separate shorts into two separate bytes so Godot sees it as PCM16 data
+            core_api->godot_vector2_set_x(&frame, inst->outputs[j]);
+            core_api->godot_vector2_set_y(&frame, inst->outputs[j+1]);
+            core_api->godot_pool_vector2_array_append(&data, &frame);
         }
     }
     if (stop_dsp(inst))
         core_api->godot_print_error("Couldn't send DSP stop message!", "pdstream_process_audio", "pdstream.c", 209);
 
-    core_api->godot_variant_new_pool_byte_array(&rval, &data);
-    core_api->godot_pool_byte_array_destroy(&data);
+    core_api->godot_variant_new_pool_vector2_array(&rval, &data);
+    core_api->godot_pool_vector2_array_destroy(&data);
 
-    printf("Finished perform");
     return rval;
 }
 

@@ -25,7 +25,7 @@ void do_create(instance_t *inst)
     libpd_init_audio((int)inst->ninputs, (int)inst->noutputs, (int)inst->samplerate);
 }
 
-int create(instance_t *inst, size_t blocksize, size_t samplerate, size_t ninputs, size_t noutputs, short *inputs, short *outputs)
+int create(instance_t *inst, size_t blocksize, size_t samplerate, size_t ninputs, size_t noutputs, float *inputs, float *outputs)
 {
     inst->blocksize   = blocksize;
     inst->samplerate  = samplerate;
@@ -249,7 +249,7 @@ void do_perform(instance_t *inst)
 {
     size_t i;
     libpd_set_instance(inst->instance);
-    libpd_process_short((int)(inst->blocksize / (size_t)64), inst->inputs, inst->outputs);
+    libpd_process_float((int)(inst->blocksize / (size_t)64), inst->inputs, inst->outputs);
 }
 
 int perform(instance_t *inst)

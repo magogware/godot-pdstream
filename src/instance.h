@@ -12,9 +12,9 @@ typedef struct instance_t
     size_t              blocksize;
     size_t              samplerate;
     size_t              ninputs;
-    short*              inputs;
+    float*              inputs;
     size_t              noutputs;
-    short*              outputs;
+    float*              outputs;
     char                file[260];
     char                folder[260];
     void*               patch;
@@ -22,7 +22,7 @@ typedef struct instance_t
 
 int pd_init();
 
-int create(instance_t *inst, size_t blocksize, size_t samplerate, size_t ninputs, size_t noutputs, short *inputs, short *outputs);
+int create(instance_t *inst, size_t blocksize, size_t samplerate, size_t ninputs, size_t noutputs, float *inputs, float *outputs);
 int destroy(instance_t *inst);
 
 int open(instance_t *inst, char *file, char *dir);
