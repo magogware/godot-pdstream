@@ -9,6 +9,8 @@ const godot_gdnative_ext_nativescript_1_1_api_struct *nativescript_ext_api = NUL
 godot_string res_prefix;
 godot_string dir_prefix;
 
+// TODO: Add error reporting function
+
 char *variant_to_chars(godot_variant *s)
 {
     godot_string string = core_api->godot_variant_as_string(s);
@@ -72,6 +74,8 @@ godot_variant pdstream_create(godot_object *p_instance,
     float *inputs, *outputs;
     size_t ninputs, noutputs, blocksize;
     int64_t samplerate;
+    
+    // TODO: fix argument providing and scope out sources of further error with parameter issues a la outputs<2 ruining interleaving
 
     blocksize  = 64;
     samplerate = 44100;
@@ -117,8 +121,6 @@ godot_variant pdstream_open(godot_object *p_instance,
 
     // FIXME: Opening twice in a row on the same object (without a second object instantiated) crashes... Is the close function working?
 
-    printf("Doing a function open\n");
-
     instance_t *inst = (instance_t *) p_user_data;
     godot_string full_path = core_api->godot_variant_as_string(p_args[0]); // store path and file separately for libpd
     godot_string file_str = core_api->godot_string_get_file(&full_path);
@@ -131,7 +133,7 @@ godot_variant pdstream_open(godot_object *p_instance,
     dir = string_to_chars(replaced);
 
     if (open(inst, file, dir))
-        core_api->godot_print_error("Couldn't open patch!", "pdstream_open_patch", "pdstream.c", 136);
+        core_api->godot_print_error("Couldn't open patch!", "pdstream_open", "pdstream.c", 131);
 
     core_api->godot_string_destroy(&full_path);
     core_api->godot_string_destroy(&file_str);
@@ -358,8 +360,12 @@ void GDN_EXPORT godot_nativescript_init(void *p_handle)
     nativescript_api->godot_nativescript_register_method(p_handle, "PdStream", "add_symbol",
         add_symbol_attributes, add_symbol);
     
-    if (pd_init())
-        core_api->godot_print_error("Couldn't start libpd!", "nativescript_init", "pdstream.c", 243);
+    int error = pd_init();
+    if (error == -1) {
+        core_api->godot_print_warning("libpd already initialised", "nativescript_init", "pdstream.c", 361);
+    } else if (error) {
+        core_api->godot_print_error("Couldn't start libpd!", "nativescript_init", "pdstream.c", 361);
+    }
 }
 
 void GDN_EXPORT godot_gdnative_init(godot_gdnative_init_options *p_options)
