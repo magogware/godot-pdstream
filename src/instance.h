@@ -1,8 +1,17 @@
 #ifndef __PDS_INSTANCE_H__
 #define __PDS_INSTANCE_H__
 
-#define PDS_INSTANCE_ERROR -1
-#define PDS_INSTANCE_SUCCESS 0
+#define PDS_ERR_SUCCESS 0
+#define PDS_ERR_INIT -1
+#define PDS_ERR_AUDIO_INIT -2
+#define PDS_ERR_PROCESS -3
+#define PDS_ERR_NO_RECV -4
+#define PDS_ERR_MSG_LEN -5
+#define PDS_ERR_FILE -6
+#define PDS_ERR_INIT_INST -7
+
+#define PDS_NINPUTS 2
+#define PDS_NOUTPUTS 2
 
 #include <z_libpd.h>
 
@@ -11,9 +20,7 @@ typedef struct instance_t
     t_pdinstance*       instance;
     size_t              blocksize;
     size_t              samplerate;
-    size_t              ninputs;
     float*              inputs;
-    size_t              noutputs;
     float*              outputs;
     char                file[260];
     char                folder[260];
@@ -22,7 +29,7 @@ typedef struct instance_t
 
 int pd_init();
 
-int create(instance_t *inst, size_t blocksize, size_t samplerate, size_t ninputs, size_t noutputs, float *inputs, float *outputs);
+int create(instance_t *inst, size_t blocksize, size_t samplerate, float *inputs, float *outputs);
 void destroy(instance_t *inst);
 
 int open(instance_t *inst, char *file, char *dir);

@@ -11,6 +11,35 @@ godot_string dir_prefix;
 
 // TODO: Add error reporting function
 
+void error(int code, const char *function, int line)
+{
+    switch (code) {
+        case PDS_ERR_SUCCESS :
+            break;
+        case PDS_ERR_INIT :
+            core_api->godot_print_warning("libpd already initialised", function, "pdstream.c", line);
+            break;
+        case PDS_ERR_AUDIO_INIT :
+            core_api->godot_print_error("Couldn't initialise audio!", function, "pdstream.c", line);
+            break;
+        case PDS_ERR_PROCESS :
+            core_api->godot_print_error("Couldn't process audio frames!", function, "pdstream.c", line);
+            break;
+        case PDS_ERR_NO_RECV :
+            core_api->godot_print_warning("Receiver for message doesn't exist", function, "pdstream.c", line);
+            break;
+        case PDS_ERR_MSG_LEN :
+            core_api->godot_print_error("Message too long!", function, "pdstream.c", line);
+            break;
+        case PDS_ERR_FILE :
+            core_api->godot_print_warning("Couldn't open patch file", function, "pdstream.c", line);
+            break;
+        case PDS_ERR_INIT_INST :
+            core_api->godot_print_error("Couldn't initialise libpd instance!", function, "pdstream.c", line);
+            break;
+    }
+}
+
 char *variant_to_chars(godot_variant *s)
 {
     godot_string string = core_api->godot_variant_as_string(s);
@@ -54,12 +83,10 @@ void pdstream_destructor(godot_object *p_instance, void *p_method_data, void *p_
     if(inst->inputs) {
         core_api->godot_free(inst->inputs);
         inst->inputs = NULL;
-        inst->ninputs = 0;
     }
     if(inst->outputs) {
         core_api->godot_free(inst->outputs);
         inst->outputs = NULL;
-        inst->noutputs = 0;
     }
     core_api->godot_free(p_user_data);
 }
@@ -72,42 +99,36 @@ godot_variant pdstream_create(godot_object *p_instance,
 {
     instance_t *inst = (instance_t *) p_user_data;
     float *inputs, *outputs;
-    size_t ninputs, noutputs, blocksize;
+    size_t blocksize;
     int64_t samplerate;
+    int block_assign_line;
     
     // TODO: fix argument providing and scope out sources of further error with parameter issues a la outputs<2 ruining interleaving
 
     blocksize  = 64;
     samplerate = 44100;
-    ninputs    = 0;
-    noutputs   = 2;
 
     switch (p_num_args) {
         case 0: {
             break;
         } case 1: {
             blocksize  = core_api->godot_variant_as_int(p_args[0]);
+            block_assign_line = __LINE__ - 1;
             break;
         } case 2: {
             blocksize  = core_api->godot_variant_as_int(p_args[0]);
             samplerate = core_api->godot_variant_as_int(p_args[1]);
             break;
-        } case 3: {
-            blocksize  = core_api->godot_variant_as_int(p_args[0]);
-            samplerate = core_api->godot_variant_as_int(p_args[1]);
-            ninputs    = core_api->godot_variant_as_int(p_args[2]);
-            break;
         }
     }
-
-    inputs =  (float *)core_api->godot_alloc(blocksize * ninputs *  sizeof(*inst->inputs));
-    outputs = (float *)core_api->godot_alloc(blocksize * noutputs * sizeof(*inst->outputs));
-
+    
     if (blocksize % 64) {
-        core_api->godot_print_error("Blocksize must be a multiple of 64!", "pdstream_init", "pdstream.c", 85);
+        core_api->godot_print_error("Blocksize must be a multiple of 64!", __func__, "pdstream.c", block_assign_line);
     } else {
-        if (create(inst, blocksize, samplerate, ninputs, noutputs, inputs, outputs))
-            core_api->godot_print_error("Couldn't create instance!", "pdstream_init", "pdstream.c", 83);
+        inputs =  (float *)core_api->godot_alloc(blocksize * PDS_NINPUTS *  sizeof(*inst->inputs));
+        outputs = (float *)core_api->godot_alloc(blocksize * PDS_NOUTPUTS * sizeof(*inst->outputs));
+
+        error(create(inst, blocksize, samplerate, inputs, outputs), __func__, __LINE__);
     }
 }
 
@@ -132,8 +153,7 @@ godot_variant pdstream_open(godot_object *p_instance,
     replaced = core_api->godot_string_replace_first(&dir_str, res_prefix, dir_prefix);
     dir = string_to_chars(replaced);
 
-    if (open(inst, file, dir))
-        core_api->godot_print_error("Couldn't open patch!", "pdstream_open", "pdstream.c", 131);
+    error(open(inst, file, dir), __func__, __LINE__);
 
     core_api->godot_string_destroy(&full_path);
     core_api->godot_string_destroy(&file_str);
@@ -181,23 +201,20 @@ godot_variant pdstream_perform(godot_object *p_instance,
     
     core_api->godot_vector2_new(&frame, 1.0, 1.0);
     core_api->godot_pool_vector2_array_new(&data);
-    if (start_dsp(inst))
-        core_api->godot_print_error("Couldn't send DSP start message!", "pdstream_process_audio", "pdstream.c", 197);
+    
+    error(start_dsp(inst), __func__, __LINE__);
     for (i = 0; i < numblocks; i++) {
-        if (perform(inst))
-            core_api->godot_print_error("Couldn't process blocks!", "pdstream_process_audio", "pdstream.c", 200);
-        for (j = 0; j < (inst->noutputs * inst->blocksize); j+=2) { // Separate shorts into two separate bytes so Godot sees it as PCM16 data
+        error(perform(inst), __func__, __LINE__);
+        for (j = 0; j < (PDS_NOUTPUTS * inst->blocksize); j+=2) {
             core_api->godot_vector2_set_x(&frame, inst->outputs[j]);
             core_api->godot_vector2_set_y(&frame, inst->outputs[j+1]);
             core_api->godot_pool_vector2_array_append(&data, &frame);
         }
     }
-    if (stop_dsp(inst))
-        core_api->godot_print_error("Couldn't send DSP stop message!", "pdstream_process_audio", "pdstream.c", 209);
+    error(stop_dsp(inst), __func__, __LINE__);
 
     core_api->godot_variant_new_pool_vector2_array(&rval, &data);
     core_api->godot_pool_vector2_array_destroy(&data);
-
     return rval;
 }
 
@@ -211,7 +228,7 @@ godot_variant pdstream_float(godot_object *p_instance,
     char *recv = variant_to_chars(p_args[0]);
     float msg = (float) core_api->godot_variant_as_real(p_args[1]);
 
-    flot(inst, recv, msg);
+    error(flot(inst, recv, msg), "pdstream_float", __LINE__);
 
     core_api->godot_free(recv);
 }
@@ -225,7 +242,7 @@ godot_variant pdstream_bang(godot_object *p_instance,
     instance_t *inst = (instance_t *) p_user_data;
     char *recv = variant_to_chars(p_args[0]);
 
-    bang(inst, recv);
+    error(bang(inst, recv), __func__, __LINE__);
 
     core_api->godot_free(recv);
 }
@@ -240,7 +257,7 @@ godot_variant pdstream_symbol(godot_object *p_instance,
     char *recv = variant_to_chars(p_args[0]);
     char *s = variant_to_chars(p_args[1]);
 
-    symbol(inst, recv, s);
+    error(symbol(inst, recv, s), __func__, __LINE__);
 
     core_api->godot_free(recv);
     core_api->godot_free(s);
@@ -281,7 +298,7 @@ godot_variant pdstream_start_message(godot_object *p_instance,
     instance_t *inst = (instance_t *) p_user_data;
     int length = core_api->godot_variant_as_int(p_args[0]);
 
-    start_message(inst, length);
+    error(start_message(inst, length), __func__, __LINE__);
 }
 
 godot_variant pdstream_finish_message(godot_object *p_instance,
@@ -294,7 +311,7 @@ godot_variant pdstream_finish_message(godot_object *p_instance,
     char *recv = variant_to_chars(p_args[0]);
     char *msg = variant_to_chars(p_args[1]);
 
-    finish_message(inst, recv, msg);
+    error(finish_message(inst, recv, msg), __func__, __LINE__);
 
     core_api->godot_free(recv);
     core_api->godot_free(msg);
@@ -360,12 +377,7 @@ void GDN_EXPORT godot_nativescript_init(void *p_handle)
     nativescript_api->godot_nativescript_register_method(p_handle, "PdStream", "add_symbol",
         add_symbol_attributes, add_symbol);
     
-    int error = pd_init();
-    if (error == -1) {
-        core_api->godot_print_warning("libpd already initialised", "nativescript_init", "pdstream.c", 361);
-    } else if (error) {
-        core_api->godot_print_error("Couldn't start libpd!", "nativescript_init", "pdstream.c", 361);
-    }
+    error(pd_init(), __func__, __LINE__);
 }
 
 void GDN_EXPORT godot_gdnative_init(godot_gdnative_init_options *p_options)
