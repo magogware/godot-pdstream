@@ -9,8 +9,6 @@ INCLUDES = -I./godot-headers \
 	
 LIBS = -L./libpd/libs -lpd
 
-LIBPD_DIR = libpd
-	
 CFLAGS = $(INCLUDES)
 
 ifeq ($(shell uname),Darwin)
@@ -25,28 +23,31 @@ endif
 
 LDFLAGS += -shared\
 	$(LIBS)
-	
+
 PDSTREAM = $(OUT)/$(SOLIB_PREFIX)pdstream.$(SOLIB_EXT)
 
+LIBPD_DIR = libpd
 LIBPD_FLAGS = MULTI=true
 LIBPD = $(LIBPD_DIR)/libs/$(SOLIB_PREFIX)pd.$(SOLIB_EXT)
+LIBPD_LOCAL = $(OUT)/$(SOLIB_PREFIX)pd.$(SOLIB_EXT)
 
 ifeq ($(OS),Windows_NT)
 	LIBPD_FLAGS += ADDITIONAL_CFLAGS='-DPD_LONGINTTYPE="long long"'
 endif
 
-$(PDSTREAM): ${SRC:.c=.o} $(LIBPD)
-	$(CC) -o $(PDSTREAM) $^ $(LDFLAGS)
+$(PDSTREAM): ${SRC:.c=.o} $(LIBPD_LOCAL)
+	$(CC) -o $@ ${SRC:.c=.o} $(LDFLAGS)
 
-clean:
-	rm ${SRC:.c=.o}
-	rm $(PDSTREAM)
-
-$(LIBPD): Makefile.patch
+$(LIBPD_LOCAL): Makefile.patch $(OUT)
 ifeq ($(OS),Windows_NT)
 	patch -u $(LIBPD_DIR)/Makefile $<
 endif
 	$(MAKE) -C $(LIBPD_DIR) $(LIBPD_FLAGS)
-	cp $(LIBPD) $(OUT)/$(SOLIB_PREFIX)pd.$(SOLIB_EXT)
+	cp $(LIBPD) $@
 
+$(OUT):
+	mkdir $@
 
+clean:
+	rm ${SRC:.c=.o}
+	rm $(PDSTREAM)
