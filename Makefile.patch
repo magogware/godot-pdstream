@@ -1,11 +1,11 @@
---- /Users/alex/Desktop/Makefile 2	2022-03-11 15:42:11.000000000 +1100
-+++ /Users/alex/Software/godot-pdstream/libpd/Makefile	2022-02-23 18:28:04.000000000 +1100
+--- MAKEFILE_ORIG
++++ MAKEFILE_WINDOWS
 @@ -226,7 +226,7 @@
  endif
  
  $(LIBPD): ${PD_FILES:.c=.o} ${UTIL_FILES:.c=.o} ${EXTRA_FILES:.c=.o}
--	$(CC) -o $(LIBPD) $^ $(LDFLAGS) -Wl,-Bstatic -lm -Wl,-Bstatic -lpthread
-+	$(CC) -o $(LIBPD) $^ $(LDFLAGS) -lm -lpthread
+-	$(CC) -o $(LIBPD) $^ $(LDFLAGS) -lm -lpthread
++	$(CC) -o $(LIBPD) $^ $(LDFLAGS) -Wl,-Bstatic -lm -Wl,-Bstatic -lpthread
  
  $(LIBPD_STATIC): ${PD_FILES:.c=.o} ${UTIL_FILES:.c=.o} ${EXTRA_FILES:.c=.o}
  	ar rcs $(LIBPD_STATIC) $^
