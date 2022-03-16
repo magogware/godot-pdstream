@@ -9,8 +9,6 @@ const godot_gdnative_ext_nativescript_1_1_api_struct *nativescript_ext_api = NUL
 godot_string res_prefix;
 godot_string dir_prefix;
 
-// TODO: Add error reporting function
-
 void error(int code, const char *function, int line)
 {
     switch (code) {
@@ -102,8 +100,6 @@ godot_variant pdstream_create(godot_object *p_instance,
     size_t blocksize;
     int64_t samplerate;
     int block_assign_line;
-    
-    // TODO: fix argument providing and scope out sources of further error with parameter issues a la outputs<2 ruining interleaving
 
     blocksize  = 64;
     samplerate = 44100;
