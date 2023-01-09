@@ -15,14 +15,24 @@ ifeq ($(shell uname),Darwin)
 	SOLIB_PREFIX = lib
 	SOLIB_EXT = dylib
 else
-	SOLIB_PREFIX =
-	SOLIB_EXT = dll
-	LDFLAGS += -Wl,--export-all-symbols \
-		-static-libgcc
+  ifeq ($(OS), Windows_NT) # Windows, use Mingw
+    SOLIB_PREFIX =
+    SOLIB_EXT = dll
+    LDFLAGS += -Wl,--export-all-symbols \
+      -static-libgcc
+  else # assume Linux
+    SOLIB_PREFIX = lib
+    SOLIB_EXT = so
+  endif
 endif
 
 LDFLAGS += -shared\
 	$(LIBS)
+
+ifeq ($(shell uname),Linux)
+  CFLAGS += -fPIC -g
+  LDFLAGS += '-Wl,-rpath,addons/audiostreampd/lib/linux'
+endif
 
 PDSTREAM = $(OUT)/$(SOLIB_PREFIX)pdstream.$(SOLIB_EXT)
 
@@ -36,7 +46,7 @@ ifeq ($(OS),Windows_NT)
 endif
 
 $(PDSTREAM): ${SRC:.c=.o} $(LIBPD_LOCAL)
-	$(CC) -o $@ ${SRC:.c=.o} $(LDFLAGS)
+	$(CC) -o $@ $(CFLAGS) ${SRC:.c=.o} $(LDFLAGS)
 
 $(LIBPD_LOCAL): Makefile.patch $(OUT)
 ifeq ($(OS),Windows_NT)

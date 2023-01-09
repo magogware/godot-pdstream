@@ -1,7 +1,7 @@
 [submodule "godot-headers"]
 	path = godot-headers
 	url = https://github.com/godotengine/godot-headers.git
-	branch = 3.4
+	branch = 3.5
 [submodule "libpd"]
 	path = libpd
 	url = https://github.com/libpd/libpd.git
