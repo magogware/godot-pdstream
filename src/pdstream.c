@@ -3,6 +3,7 @@
 
 #include "instance.h"
 
+
 const godot_gdnative_core_api_struct *core_api = NULL;
 const godot_gdnative_ext_nativescript_api_struct *nativescript_api = NULL;
 const godot_gdnative_ext_nativescript_1_1_api_struct *nativescript_ext_api = NULL;
@@ -315,6 +316,10 @@ godot_variant pdstream_finish_message(godot_object *p_instance,
 
 void GDN_EXPORT godot_nativescript_init(void *p_handle)
 {
+    godot_string msg = core_api->godot_string_chars_to_utf8("MOGvirtual Synth v0.01");
+    core_api->godot_print(&msg);
+    core_api->godot_string_destroy(&msg);
+
     godot_instance_create_func creator = { &pdstream_constructor, NULL, NULL };
     godot_instance_destroy_func destroyer = { &pdstream_destructor, NULL, NULL };
 
@@ -378,6 +383,10 @@ void GDN_EXPORT godot_nativescript_init(void *p_handle)
 
 void GDN_EXPORT godot_gdnative_init(godot_gdnative_init_options *p_options)
 {
+    godot_string msg = core_api->godot_string_chars_to_utf8("MOGvirtual Synth v0.01");
+    core_api->godot_print(&msg);
+    core_api->godot_string_destroy(&msg);
+
     core_api = p_options->api_struct;
     core_api->godot_string_parse_utf8(&res_prefix, "res://");
     core_api->godot_string_parse_utf8(&dir_prefix, "./");
