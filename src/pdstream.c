@@ -10,7 +10,7 @@ const godot_gdnative_ext_nativescript_1_1_api_struct *nativescript_ext_api = NUL
 godot_string res_prefix;
 godot_string dir_prefix;
 
-void error(int code, const char *function, int line)
+void error_reporter(int code, const char *function, int line)
 {
     switch (code) {
         case PDS_ERR_SUCCESS :
@@ -125,7 +125,7 @@ godot_variant pdstream_create(godot_object *p_instance,
         inputs =  (float *)core_api->godot_alloc(blocksize * PDS_NINPUTS *  sizeof(*inst->inputs));
         outputs = (float *)core_api->godot_alloc(blocksize * PDS_NOUTPUTS * sizeof(*inst->outputs));
 
-        error(create(inst, blocksize, samplerate, inputs, outputs), __func__, __LINE__);
+        error_reporter(create(inst, blocksize, samplerate, inputs, outputs), __func__, __LINE__);
     }
 }
 
@@ -150,7 +150,7 @@ godot_variant pdstream_open(godot_object *p_instance,
     replaced = core_api->godot_string_replace_first(&dir_str, res_prefix, dir_prefix);
     dir = string_to_chars(replaced);
 
-    error(open(inst, file, dir), __func__, __LINE__);
+    error_reporter(open(inst, file, dir), __func__, __LINE__);
 
     core_api->godot_string_destroy(&full_path);
     core_api->godot_string_destroy(&file_str);
@@ -199,16 +199,16 @@ godot_variant pdstream_perform(godot_object *p_instance,
     core_api->godot_vector2_new(&frame, 1.0, 1.0);
     core_api->godot_pool_vector2_array_new(&data);
     
-    error(start_dsp(inst), __func__, __LINE__);
+    error_reporter(start_dsp(inst), __func__, __LINE__);
     for (i = 0; i < numblocks; i++) {
-        error(perform(inst), __func__, __LINE__);
+        error_reporter(perform(inst), __func__, __LINE__);
         for (j = 0; j < (PDS_NOUTPUTS * inst->blocksize); j+=2) {
             core_api->godot_vector2_set_x(&frame, inst->outputs[j]);
             core_api->godot_vector2_set_y(&frame, inst->outputs[j+1]);
             core_api->godot_pool_vector2_array_append(&data, &frame);
         }
     }
-    error(stop_dsp(inst), __func__, __LINE__);
+    error_reporter(stop_dsp(inst), __func__, __LINE__);
 
     core_api->godot_variant_new_pool_vector2_array(&rval, &data);
     core_api->godot_pool_vector2_array_destroy(&data);
@@ -225,7 +225,7 @@ godot_variant pdstream_float(godot_object *p_instance,
     char *recv = variant_to_chars(p_args[0]);
     float msg = (float) core_api->godot_variant_as_real(p_args[1]);
 
-    error(flot(inst, recv, msg), "pdstream_float", __LINE__);
+    error_reporter(flot(inst, recv, msg), "pdstream_float", __LINE__);
 
     core_api->godot_free(recv);
 }
@@ -239,7 +239,7 @@ godot_variant pdstream_bang(godot_object *p_instance,
     instance_t *inst = (instance_t *) p_user_data;
     char *recv = variant_to_chars(p_args[0]);
 
-    error(bang(inst, recv), __func__, __LINE__);
+    error_reporter(bang(inst, recv), __func__, __LINE__);
 
     core_api->godot_free(recv);
 }
@@ -254,7 +254,7 @@ godot_variant pdstream_symbol(godot_object *p_instance,
     char *recv = variant_to_chars(p_args[0]);
     char *s = variant_to_chars(p_args[1]);
 
-    error(symbol(inst, recv, s), __func__, __LINE__);
+    error_reporter(symbol(inst, recv, s), __func__, __LINE__);
 
     core_api->godot_free(recv);
     core_api->godot_free(s);
@@ -295,7 +295,7 @@ godot_variant pdstream_start_message(godot_object *p_instance,
     instance_t *inst = (instance_t *) p_user_data;
     int length = core_api->godot_variant_as_int(p_args[0]);
 
-    error(start_message(inst, length), __func__, __LINE__);
+    error_reporter(start_message(inst, length), __func__, __LINE__);
 }
 
 godot_variant pdstream_finish_message(godot_object *p_instance,
@@ -308,7 +308,7 @@ godot_variant pdstream_finish_message(godot_object *p_instance,
     char *recv = variant_to_chars(p_args[0]);
     char *msg = variant_to_chars(p_args[1]);
 
-    error(finish_message(inst, recv, msg), __func__, __LINE__);
+    error_reporter(finish_message(inst, recv, msg), __func__, __LINE__);
 
     core_api->godot_free(recv);
     core_api->godot_free(msg);
@@ -316,10 +316,6 @@ godot_variant pdstream_finish_message(godot_object *p_instance,
 
 void GDN_EXPORT godot_nativescript_init(void *p_handle)
 {
-    godot_string msg = core_api->godot_string_chars_to_utf8("MOGvirtual Synth v0.01");
-    core_api->godot_print(&msg);
-    core_api->godot_string_destroy(&msg);
-
     godot_instance_create_func creator = { &pdstream_constructor, NULL, NULL };
     godot_instance_destroy_func destroyer = { &pdstream_destructor, NULL, NULL };
 
@@ -378,15 +374,11 @@ void GDN_EXPORT godot_nativescript_init(void *p_handle)
     nativescript_api->godot_nativescript_register_method(p_handle, "PdStream", "add_symbol",
         add_symbol_attributes, add_symbol);
     
-    error(pd_init(), __func__, __LINE__);
+    error_reporter(pd_init(), __func__, __LINE__);
 }
 
 void GDN_EXPORT godot_gdnative_init(godot_gdnative_init_options *p_options)
 {
-    godot_string msg = core_api->godot_string_chars_to_utf8("MOGvirtual Synth v0.01");
-    core_api->godot_print(&msg);
-    core_api->godot_string_destroy(&msg);
-
     core_api = p_options->api_struct;
     core_api->godot_string_parse_utf8(&res_prefix, "res://");
     core_api->godot_string_parse_utf8(&dir_prefix, "./");
